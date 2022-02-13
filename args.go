@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	//"os"
-	"strconv"
-	"strings"
 )
 
 const Usage = `
@@ -31,34 +27,40 @@ OPTIONS
 		padding value (leading 0's)
 `
 
-type Bound struct {
-	lower     int
-	upper     int
-	maxLength int
-}
-
 // this will hold all options
 type CliOptions struct {
-	// url base from which download
-	url string
+	// DNS resolver to which forward requests
+	resolver string
 
-	// bounds in url
-	bound Bound
+	// Whole resolver address (e.g.: 1.1.1.1:53)
+	resolverAddress string
 
-	// whether we pad the bounds with leading 0: e.g.: if bounds == 2..10, do we loop on: 02 03 ... 10 ?
-	// padding = the bound length as a string. e.g.: if padding == 3 and bounds == 2..20, bounds start at 002
-	padding int
+	// log file
+	logFile string
+
+	// do not filter, just log requests
+	noFilter bool
+
+	// configuration file
+	configFile string
+
+	// pointer on log file
+	logFileHAndle *os.File
+
+	// debug flag
+	debug bool
 }
 
 func CliArgs() CliOptions {
 	// init struct
 	var options CliOptions
-	var bounds string
 
 	// if set, we want the line number from the file
-	flag.StringVar(&options.url, "u", "", "base url to fetch")
-	flag.StringVar(&bounds, "b", "", "bounds expressed like lower..upper (e.g.: 4..10)")
-	flag.IntVar(&options.padding, "p", 0, "padding length")
+	flag.StringVar(&options.resolver, "r", "1.1.1.1", "DNS resolver to which unfiltered requests are forwarded")
+	flag.StringVar(&options.logFile, "l", "dnswall.log", "log file name and path")
+	flag.StringVar(&options.configFile, "c", "dnswall.yml", "configuration file name and path")
+	flag.BoolVar(&options.noFilter, "n", false, "don't filter DNS requests")
+	flag.BoolVar(&options.debug, "d", false, "debug flag")
 
 	flag.Usage = func() {
 		fmt.Print(Usage)
@@ -66,51 +68,27 @@ func CliArgs() CliOptions {
 
 	flag.Parse()
 
+	// open or create log file
+	f, err := os.OpenFile(options.logFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error: <%v> opening file: <%v>", options.logFile, err)
+	}
+	log.SetOutput(f)
+
+	// customize log format
+	log.SetFlags(log.Ldate | log.Lmicroseconds)
+
+	// save handler to close it gracefully when exiting
+	options.logFileHAndle = f
+
+	// build resolver full address
+	options.resolverAddress = fmt.Sprintf("%s:53", options.resolver)
+
 	// nothing entered: show help
 	// if len(flag.Args()) == 0 {
 	// 	fmt.Print(Usage)
 	// 	os.Exit(0)
 	// }
 
-	// mandatory arguments
-	if options.url == "" {
-		log.Fatalf("argument url is mandatory")
-		os.Exit(1)
-	}
-
-	if bounds == "" {
-		log.Fatalf("argument bound is mandatory")
-		os.Exit(2)
-	}
-
-	// some checks
-	if options.padding < 0 {
-		log.Fatalf("padding should be positive!")
-		os.Exit(3)
-	}
-
-	// get bounds
-	splittedBounds := strings.Split(bounds, "..")
-	options.bound.lower = toInt(splittedBounds[0])
-	options.bound.upper = toInt(splittedBounds[1])
-	options.bound.maxLength = Max(len(splittedBounds[0]), len(splittedBounds[1]))
-
 	return options
-}
-
-// convert a boolean to 0 or 1
-func toInt(s string) int {
-	v, err := strconv.Atoi(s)
-	if err != nil {
-		log.Fatalf("unable to convert %s value to integer", s)
-	}
-	return v
-}
-
-// Max returns the larger of x or y.
-func Max(x, y int) int {
-	if x < y {
-		return y
-	}
-	return x
 }

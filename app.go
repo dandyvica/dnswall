@@ -1,67 +1,47 @@
 package main
 
 import (
-	"bytes"
-	//"fmt"
 	"log"
 	"net"
 	"sync"
-	"bufio"
 )
 
 func main() {
 	// this will sync our go routines
 	var wg sync.WaitGroup
 
-	// start udp server on local address
-	server, err := net.ListenPacket("udp4", "127.0.0.1:53")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer server.Close()
+	// get command line arguments
+	options := CliArgs()
+	defer options.logFileHAndle.Close()
 
+	if options.debug {
+		log.Printf("%v", options)
+	}
+
+	log.Printf("using resolver: %s", options.resolver)
+
+	// start udp UDPServer on local address
+	UDPServer, err := net.ListenPacket("udp4", "127.0.0.1:53")
+	if err != nil {
+		log.Fatalf("error: <%v> when creating udp server on 127.0.0.1:53", err)
+	}
+	defer UDPServer.Close()
+	log.Printf("listening to DNS requests")
+
+	// handle DNS requests from clients
 	for {
 		// read data from client
 		buf := make([]byte, 1024)
-		n, client_addr, err := server.ReadFrom(buf)
-		log.Printf("%d bytes received from address: %v\n", n, client_addr)
+		nbBytes, clientAddr, err := UDPServer.ReadFrom(buf)
 		if err != nil {
+			log.Printf("error: <%v> reading bytes from address: <%v>\n", nbBytes, clientAddr)
 			continue
 		}
-		go serve(server, client_addr, buf[:n])
+
+		// serve request
+		log.Printf("%d bytes received from address: %v\n", nbBytes, clientAddr)
+		go handleDNSRequest(UDPServer, clientAddr, buf[:nbBytes], &options)
 	}
 
 	wg.Wait()
-}
-
-func serve(pc net.PacketConn, addr net.Addr, buffer []byte) {
-	// define a new reader
-	rdr := bytes.NewReader(buffer)
-
-	// read DNS header
-	header := new(DNSPacketHeader)
-	_ = header.FromNetworkBytes(rdr)
-	log.Printf("header=%+v", header)
-
-	// now read questions
-	for i := uint16(0); i < header.Qd_count; i++ {
-		question := new(DNSQuestion)
-		question.FromNetworkBytes(rdr)
-		log.Printf("question=%+v", question)
-	}
-
-	// send back question to DNS resolver
-    conn, err := net.Dial("udp", "1.1.1.1:53")
-    if err != nil {
-        log.Printf("error in connection to DNS resolver: %v", err)
-        return
-    }	
-	conn.Write(buffer)
-
-	// wait answer from resolver
-	p :=  make([]byte, 2048)
-	_, err = bufio.NewReader(conn).Read(p)
-
-	// send back to client
-	pc.WriteTo(p, addr)
 }

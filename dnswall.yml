@@ -1,0 +1,5 @@
+resolver: 1.1.1.1
+
+domains:
+    whitelist:
+    blacklist:
