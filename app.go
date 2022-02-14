@@ -18,6 +18,10 @@ func main() {
 		log.Printf("%v", options)
 	}
 
+	// load yaml file
+	var config Config
+	config.getConfig(options.configFile)
+
 	log.Printf("using resolver: %s", options.resolver)
 
 	// start udp UDPServer on local address
