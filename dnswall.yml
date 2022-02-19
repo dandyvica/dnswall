@@ -1,4 +1,4 @@
 resolver: 1.1.1.1
 
-domains:
-    - \.cn$
+filters:
+    - ./data/sample1.txt
