@@ -35,6 +35,9 @@ type CliOptions struct {
 	// Whole resolver address (e.g.: 1.1.1.1:53)
 	resolverAddress string
 
+	// timeout when sending queries to resolver or sending back data to client
+	timeout int
+
 	// log file
 	logFile string
 
@@ -61,6 +64,7 @@ func CliArgs() CliOptions {
 	flag.StringVar(&options.configFile, "c", "dnswall.yml", "configuration file name and path")
 	flag.BoolVar(&options.noFilter, "n", false, "don't filter DNS requests")
 	flag.BoolVar(&options.debug, "d", false, "debug flag")
+	flag.IntVar(&options.timeout, "t", 5, "debug flag")
 
 	flag.Usage = func() {
 		fmt.Print(Usage)

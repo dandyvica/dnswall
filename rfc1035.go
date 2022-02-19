@@ -2,9 +2,21 @@
 package main
 
 import (
+	//"bytes"
 	"encoding/binary"
+	"strings"
+
+	//"fmt"
 	"io"
 )
+
+// Utility finction to convert a bool to an uint16: no standard conversion offered by Go
+func bool2int16(b bool) uint16 {
+	if b {
+		return uint16(1)
+	}
+	return uint16(0)
+}
 
 type DNSPacketHeader struct {
 	Id uint16 // A 16 bit identifier assigned by the program that
@@ -106,6 +118,30 @@ func (flags *DNSPacketFlags) FromNetworkBytes(value uint16) {
 	flags.RCODE = byte(value & 0b1111)
 }
 
+// Write a DNSPacketFlags struct to a buffer
+// func (flags *DNSPacketFlags) ToNetworkBytes(buffer []byte) error {
+// 	// define a new buf
+// 	buf := new(bytes.Buffer)
+
+// 	// build a uint16 integer from flags
+// 	value := uint16(flags.QR) << 15;
+// 	value |= uint16(flags.OpCode) << 11;
+// 	value |= bool2int16(flags.AA) << 10
+// 	value |= bool2int16(flags.TC) << 9
+// 	value |= bool2int16(flags.RD) << 8
+// 	value |= bool2int16(flags.RA) << 7
+// 	value |= bool2int16(flags.Z) << 6
+// 	value |= bool2int16(flags.AD) << 5
+// 	value |= bool2int16(flags.CD) << 4
+// 	value |= uint16(flags.RCODE)
+
+// 	fmt.Printf("value=%d\n", value)
+// 	err := binary.Write(buf, binary.BigEndian, value)
+// 	buf.Write(buffer)
+// 	fmt.Printf("buffer in=%+v\n", buf.Bytes())
+// 	return err
+// }
+
 // Question
 type DNSQuestion struct {
 	Domain string // a domain name represented as a sequence of labels, where
@@ -149,8 +185,11 @@ func (question *DNSQuestion) FromNetworkBytes(rdr io.Reader) error {
 		}
 
 		question.Domain += string(label) + "."
-
 	}
+
+	// as "." was added (ex: www.google.com.) which normally is the way domains are expected, this is not convenient
+	// for blacklisting. So delete last chars
+	question.Domain = strings.TrimSuffix(question.Domain, ".")
 
 	// now read QType and QClass: read buffer and convert to uint16
 	var buffer [4]byte

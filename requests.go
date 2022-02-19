@@ -2,6 +2,9 @@ package main
 
 import (
 	"bufio"
+	"strings"
+
+	//"encoding/binary"
 	"bytes"
 	"log"
 	"net"
@@ -12,7 +15,7 @@ const (
 )
 
 // This functions is call by the UDP server to server requests
-func handleDNSRequest(packet net.PacketConn, requesterAddress net.Addr, buffer []byte, options *CliOptions) {
+func handleDNSRequest(conn *net.UDPConn, requesterAddress net.Addr, buffer []byte, options *CliOptions) {
 	// get DNS question from initial request
 	question, err := GetDomainQuestion(buffer, options)
 	if err != nil {
@@ -20,14 +23,28 @@ func handleDNSRequest(packet net.PacketConn, requesterAddress net.Addr, buffer [
 	}
 	log.Printf("received request <%s> for domain: <%s> for requester: <%v>", GetQType(question.QType), question.Domain, requesterAddress)
 
+	//---------------
+	// test
+
+	if strings.HasSuffix(question.Domain, ".org") {
+		err = AnswerNxDomain(conn, buffer, requesterAddress)
+		if err != nil {
+			return
+		}
+		log.Printf("domain <%s> is blacklisted", question.Domain)
+		return
+	}
+
+	//---------------
+
 	// send question to resolver and wait for its answer
-	answerBuffer, nbReadBytes, err := GetAnswerFromResolver(buffer, options, requesterAddress)
+	answerBuffer, nbReadBytes, err := QueryResolver(buffer, options, requesterAddress)
 	if err != nil {
 		return
 	}
 
 	// send back answer coming from resolver to requester
-	nbWrittenBytes, err := packet.WriteTo(answerBuffer[:nbReadBytes], requesterAddress)
+	nbWrittenBytes, err := conn.WriteTo(answerBuffer[:nbReadBytes], requesterAddress)
 	if err != nil {
 		log.Printf("error: <%v> when writing back to DNS requester", err)
 		return
@@ -77,7 +94,7 @@ func GetDomainQuestion(buffer []byte, options *CliOptions) (*DNSQuestion, error)
 }
 
 // Send request to resolver and wait for request
-func GetAnswerFromResolver(buffer []byte, options *CliOptions, requesterAddress net.Addr) ([]byte, int, error) {
+func QueryResolver(buffer []byte, options *CliOptions, requesterAddress net.Addr) ([]byte, int, error) {
 	// open connection to DNS resolver
 	conn, err := net.Dial("udp", options.resolverAddress)
 	if err != nil {
@@ -107,4 +124,19 @@ func GetAnswerFromResolver(buffer []byte, options *CliOptions, requesterAddress 
 	}
 
 	return answerBuffer, nbReadBytes, nil
+}
+
+// Respond with a NXDOMAIN to the requester to mean domain is not existing
+func AnswerNxDomain(conn *net.UDPConn, buffer []byte, requesterAddress net.Addr) error {
+	// set flags: QR =1 (it's a response) and RCODE to 3 = NXDOMAIN
+	buffer[2] = 0x81
+	buffer[3] = 0xA3
+
+	// send back answer coming from resolver to requester
+	_, err := conn.WriteTo(buffer, requesterAddress)
+	if err != nil {
+		log.Printf("error: <%v> when writing NXDOMAIN DNS requester", err)
+		return err
+	}
+	return nil
 }

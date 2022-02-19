@@ -24,8 +24,14 @@ func main() {
 
 	log.Printf("using resolver: %s", options.resolver)
 
-	// start udp UDPServer on local address
-	UDPServer, err := net.ListenPacket("udp4", "127.0.0.1:53")
+	// listen to this local address
+	serverAddress := net.UDPAddr{
+		Port: 53,
+		IP:   net.ParseIP("127.0.0.1"),
+	}
+
+	// start udp UDPServer on previously defined address
+	UDPServer, err := net.ListenUDP("udp", &serverAddress)
 	if err != nil {
 		log.Fatalf("error: <%v> when creating udp server on 127.0.0.1:53", err)
 	}
