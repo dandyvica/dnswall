@@ -23,7 +23,7 @@ type DNSPacketHeader struct {
 	//   generates any kind of query.  This identifier is copied
 	//   the corresponding reply and can be used by the requester
 	//   to match up replies to outstanding queries.
-	Flags    uint16
+	Flags    uint16 // see below
 	Qd_count uint16 // an unsigned 16 bit integer specifying the number of
 	//    entries in the question section.
 	An_count uint16 // an unsigned 16 bit integer specifying the number of
@@ -35,7 +35,7 @@ type DNSPacketHeader struct {
 }
 
 // Convert a buffer to a DNSPacketHeader struct
-func (header *DNSPacketHeader) FromNetworkBytes(rdr io.Reader) error {
+func (header *DNSPacketHeader) fromNetworkBytes(rdr io.Reader) error {
 	return binary.Read(rdr, binary.BigEndian, header)
 }
 
@@ -97,7 +97,7 @@ type DNSPacketFlags struct {
 }
 
 // Convert a buffer to a DNSPacketFlags struct
-func (flags *DNSPacketFlags) FromNetworkBytes(value uint16) {
+func (flags *DNSPacketFlags) fromNetworkBytes(value uint16) {
 	// decode all flags according to structure
 	//                               1  1  1  1  1  1
 	// 0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
@@ -159,7 +159,7 @@ type DNSQuestion struct {
 }
 
 // Read the question
-func (question *DNSQuestion) FromNetworkBytes(rdr io.Reader) error {
+func (question *DNSQuestion) fromNetworkBytes(rdr io.Reader) error {
 	for {
 		var buffer [1]byte
 
@@ -207,7 +207,7 @@ func (question *DNSQuestion) FromNetworkBytes(rdr io.Reader) error {
 
 // Get the QType string from its numeric value
 // RR type codes: https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4
-func GetQType(value uint16) string {
+func qType(value uint16) string {
 	switch value {
 	case 1:
 		return "A" // a host address	[RFC1035]

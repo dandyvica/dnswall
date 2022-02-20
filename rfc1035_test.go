@@ -12,7 +12,7 @@ func TestDNSPacketHeader(t *testing.T) {
 
 	buffer := []byte{0x30, 0x5c, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}
 	header := new(DNSPacketHeader)
-	err := header.FromNetworkBytes(bytes.NewReader(buffer))
+	err := header.fromNetworkBytes(bytes.NewReader(buffer))
 
 	assert.NotNil(t, err)
 
@@ -29,7 +29,7 @@ func TestDNSFlags(t *testing.T) {
 
 	// FromNetworkBytes
 	flags := new(DNSPacketFlags)
-	flags.FromNetworkBytes(uint16(0b1000_1111_1111_0000))
+	flags.fromNetworkBytes(uint16(0b1000_1111_1111_0000))
 
 	assert.Equal(flags.QR, uint8(1))
 	assert.Equal(flags.OpCode, uint8(1))
@@ -66,7 +66,7 @@ func TestDNSQuestion(t *testing.T) {
 
 	buffer := []byte{0x03, 0x77, 0x77, 0x77, 0x06, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x03, 0x63, 0x6f, 0x6d, 0x00, 0x00, 0x01, 0x00, 0x01}
 	question := new(DNSQuestion)
-	err := question.FromNetworkBytes(bytes.NewReader(buffer))
+	err := question.fromNetworkBytes(bytes.NewReader(buffer))
 
 	assert.NotNil(t, err)
 

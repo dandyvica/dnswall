@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"fmt"
+
 	//"fmt"
 	"log"
 	"os"
@@ -11,27 +13,29 @@ import (
 
 // List of domains to accept or reject. White list is tested first
 type FilteredDomains struct {
-	whiteList []regexp.Regexp
-	blackList []regexp.Regexp
+	whiteList RegexpFilter
+	blackList RegexpFilter
 }
 
-func (domains *FilteredDomains) New() {
-	//domains.whiteList
-	domains.blackList = append(domains.blackList, *regexp.MustCompile(`\.cn$`))
+// Allocate memory for slice of regexes
+func (fd *FilteredDomains) init() {
+	fd.whiteList.exprList = make([]*regexp.Regexp, 0)
+	fd.blackList.exprList = make([]*regexp.Regexp, 0)
 }
 
 // test whether a domain has to be filtered or not
-func (domains *FilteredDomains) IsFiltered(domain string) bool {
+func (domains *FilteredDomains) isFiltered(domain string) bool {
 	// try to match a domain in the whitelist first
-	for _, domainRe := range domains.whiteList {
-		if domainRe.MatchString(domain) {
+	for _, re := range domains.whiteList.exprList {
+		if re.MatchString(domain) {
 			return false
 		}
 	}
 
 	// try then to match a domain in the blacklist
-	for _, domainRe := range domains.blackList {
-		if domainRe.MatchString(domain) {
+	for _, re := range domains.blackList.exprList {
+		if re.MatchString(domain) {
+			fmt.Printf("domain <%s> matched <%s>\n", domain, re.String())
 			return true
 		}
 	}
@@ -42,21 +46,12 @@ func (domains *FilteredDomains) IsFiltered(domain string) bool {
 // When reading a blocklist containing regexes, all data are kept here.
 // Each line is converted to a compiled regexp
 type RegexpFilter struct {
-	// blocklist file name
-	filterFile string
-
-	// list of compiled regexes coming from the blocklist
-	exprList []*regexp.Regexp
+	exprList []*regexp.Regexp // list of compiled regexes coming from the blocklist
 }
 
 // Read a blocklist with one regex per file and create the RegexpFilter struct
 // exit process if a regex doesn't compile
-// The initial capacity is made for initializing the slice
-func ReadFilterFile(filterFile string, initialCapacity int) *RegexpFilter {
-	filter := new(RegexpFilter)
-	filter.exprList = make([]*regexp.Regexp, 0, initialCapacity)
-	filter.filterFile = filterFile
-
+func (filter *RegexpFilter) readFilterFile(filterFile string) {
 	fileHandle, err := os.Open(filterFile)
 	if err != nil {
 		log.Fatal(err)
@@ -64,10 +59,14 @@ func ReadFilterFile(filterFile string, initialCapacity int) *RegexpFilter {
 	defer fileHandle.Close()
 
 	scanner := bufio.NewScanner(fileHandle)
-	// optionally, resize scanner's capacity for lines over 64K, see next example
 	for scanner.Scan() {
 		// get rid of trailing spaces
 		text := strings.TrimSpace(scanner.Text())
+
+		// skip comments
+		if strings.HasPrefix(text, "#") {
+			continue
+		}
 
 		// compile the string regexp
 		re, err := regexp.Compile(text)
@@ -82,8 +81,6 @@ func ReadFilterFile(filterFile string, initialCapacity int) *RegexpFilter {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-
-	return filter
 }
 
 // Return true if any of the regexes matches the text

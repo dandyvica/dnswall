@@ -11,18 +11,13 @@ func main() {
 	var wg sync.WaitGroup
 
 	// get command line arguments
-	options := CliArgs()
-	defer options.logFileHAndle.Close()
+	conf := readCliArgs()
+	defer conf.logFileHAndle.Close()
 
-	if options.debug {
-		log.Printf("%v", options)
+	if conf.debug {
+		log.Printf("%v", conf)
 	}
-
-	// load yaml file
-	var config Config
-	config.getConfig(options.configFile)
-
-	log.Printf("using resolver: %s", options.resolver)
+	log.Printf("using resolver: %s", conf.resolver)
 
 	// listen to this local address
 	serverAddress := net.UDPAddr{
@@ -50,7 +45,7 @@ func main() {
 
 		// serve request
 		log.Printf("%d bytes received from address: %v\n", nbBytes, clientAddr)
-		go handleDNSRequest(UDPServer, clientAddr, buf[:nbBytes], &options)
+		go handleDNSRequest(UDPServer, clientAddr, buf[:nbBytes], &conf)
 	}
 
 	wg.Wait()
