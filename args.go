@@ -89,6 +89,49 @@ func readCliArgs() Config {
 	conf.resolverAddress = fmt.Sprintf("%s:53", conf.resolver)
 
 	// read YAML config
+	conf.readBlocklists()
+
+	// var yamlConf YAMLConfig
+	// yamlConf.read(conf.yamlConfigFile)
+	// fmt.Printf("config=%+v\n", yamlConf)
+
+	// // now read blocklists
+	// conf.filters.init()
+
+	// for _, list := range yamlConf.Filters.Blacklist {
+	// 	conf.filters.blackList.readFilterFile(list)
+	// }
+	// for _, list := range yamlConf.Filters.Whitelist {
+	// 	conf.filters.whiteList.readFilterFile(list)
+	// }
+
+	// nothing entered: show help
+	// if len(flag.Args()) == 0 {
+	// 	fmt.Print(Usage)
+	// 	os.Exit(0)
+	// }
+
+	return conf
+}
+
+// Read the YAML configuration file
+func (yamlConf *YAMLConfig) read(configFile string) *YAMLConfig {
+	yamlFile, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		log.Fatalf("error <%v> opening YAML configuration file: <%s>", err, configFile)
+	}
+	err = yaml.Unmarshal(yamlFile, yamlConf)
+	if err != nil {
+		log.Fatalf("error <%v> reading YAML configuration file: <%s>", err, configFile)
+	}
+	log.Printf("succesfully read YAML file: <%s>, data: <%+v>\n", configFile, yamlConf)
+
+	return yamlConf
+}
+
+// Read blocklists and convert them into regexes
+func (conf *Config) readBlocklists() {
+	// read YAML config
 	var yamlConf YAMLConfig
 	yamlConf.read(conf.yamlConfigFile)
 	fmt.Printf("config=%+v\n", yamlConf)
@@ -101,28 +144,6 @@ func readCliArgs() Config {
 	}
 	for _, list := range yamlConf.Filters.Whitelist {
 		conf.filters.whiteList.readFilterFile(list)
-	}
-
-	// nothing entered: show help
-	// if len(flag.Args()) == 0 {
-	// 	fmt.Print(Usage)
-	// 	os.Exit(0)
-	// }
-
-	return conf
+	}	
 }
 
-// Read the YAML configuration file
-func (config *YAMLConfig) read(configFile string) *YAMLConfig {
-	yamlFile, err := ioutil.ReadFile(configFile)
-	if err != nil {
-		log.Fatalf("error <%v> opening YAML configuration file: <%s>", err, configFile)
-	}
-	err = yaml.Unmarshal(yamlFile, config)
-	if err != nil {
-		log.Fatalf("error <%v> reading YAML configuration file: <%s>", err, configFile)
-	}
-	log.Printf("succesfully read YAML file: <%s>, data: <%+v>\n", configFile, config)
-
-	return config
-}

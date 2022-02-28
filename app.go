@@ -1,3 +1,7 @@
+// A straightforward but efficient way to block (or authorize) DNS domains.
+// TODO: add ip filtering
+// TODO: add auto-reload of blocklists
+
 package main
 
 import (

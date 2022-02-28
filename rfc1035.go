@@ -1,4 +1,5 @@
-// Main structure for DNS headers, flags, etc
+// Main structures for DNS headers, flags, etc
+// Coming from https://datatracker.ietf.org/doc/html/rfc1035
 package main
 
 import (
@@ -10,7 +11,7 @@ import (
 	"io"
 )
 
-// Utility finction to convert a bool to an uint16: no standard conversion offered by Go
+// Utility function to convert a bool to an uint16: no standard conversion offered by Go
 func bool2int16(b bool) uint16 {
 	if b {
 		return uint16(1)
@@ -18,6 +19,7 @@ func bool2int16(b bool) uint16 {
 	return uint16(0)
 }
 
+// From RFC1035: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
 type DNSPacketHeader struct {
 	Id uint16 // A 16 bit identifier assigned by the program that
 	//   generates any kind of query.  This identifier is copied
@@ -34,12 +36,12 @@ type DNSPacketHeader struct {
 	// resource records in the additional records section.
 }
 
-// Convert a buffer to a DNSPacketHeader struct
+// Convert a buffer to a DNSPacketHeader struct, from BigEndian
 func (header *DNSPacketHeader) fromNetworkBytes(rdr io.Reader) error {
 	return binary.Read(rdr, binary.BigEndian, header)
 }
 
-// Flags: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
+// From RFC1035: : https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.1
 type DNSPacketFlags struct {
 	QR     byte // A one bit field that specifies whether this message is a query (0), or a response (1).
 	OpCode byte // A four bit field that specifies kind of query in this
@@ -96,7 +98,7 @@ type DNSPacketFlags struct {
 	//6-15            Reserved for future use.
 }
 
-// Convert a buffer to a DNSPacketFlags struct
+// Convert a buffer to a DNSPacketFlags struct, from BigEndian
 func (flags *DNSPacketFlags) fromNetworkBytes(value uint16) {
 	// decode all flags according to structure
 	//                               1  1  1  1  1  1
@@ -142,7 +144,7 @@ func (flags *DNSPacketFlags) fromNetworkBytes(value uint16) {
 // 	return err
 // }
 
-// Question
+// From RFC1035: https://datatracker.ietf.org/doc/html/rfc1035#section-4.1.2
 type DNSQuestion struct {
 	Domain string // a domain name represented as a sequence of labels, where
 	//             each label consists of a length octet followed by that
@@ -158,7 +160,8 @@ type DNSQuestion struct {
 	// For example, the QCLASS field is IN for the Internet.
 }
 
-// Read the question
+// Read the question: due to the way labels are defined, need to read the buffer and build the domain
+// as a collection of labels
 func (question *DNSQuestion) fromNetworkBytes(rdr io.Reader) error {
 	for {
 		var buffer [1]byte
@@ -188,7 +191,7 @@ func (question *DNSQuestion) fromNetworkBytes(rdr io.Reader) error {
 	}
 
 	// as "." was added (ex: www.google.com.) which normally is the way domains are expected, this is not convenient
-	// for blacklisting. So delete last chars
+	// for blacklisting. So delete last char
 	question.Domain = strings.TrimSuffix(question.Domain, ".")
 
 	// now read QType and QClass: read buffer and convert to uint16
