@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -37,6 +38,9 @@ func main() {
 	defer UDPServer.Close()
 	log.Printf("listening to DNS requests")
 
+	// launch goroutine to regularly update the blocklists
+	go updateBlockLists(&conf)
+
 	// handle DNS requests from clients
 	for {
 		// read data from client
@@ -53,4 +57,16 @@ func main() {
 	}
 
 	wg.Wait()
+}
+
+// Update the blocklist regularly
+func updateBlockLists(conf *Config) {
+	for {
+		// sleep before reading
+		time.Sleep(time.Duration(conf.timeout) * time.Second)
+
+		log.Printf("updating blocklists\n")
+		conf.readBlocklists()
+	}
+
 }

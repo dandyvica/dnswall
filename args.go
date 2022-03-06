@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 )
@@ -40,13 +41,14 @@ type Config struct {
 	yamlConfigFile  string          // configuration file
 	logFileHAndle   *os.File        // pointer on log file
 	debug           bool            // debug flag
-	filters         FilteredDomains // list of either whitelisted domains for which DNS domain will not be blocked and
-	// blacklisted ones for which a NXDOMAIN will be sent back
+	filters         FilteredDomains // list of either whitelisted domains for which DNS domain will not be blocked and blacklisted ones for which a NXDOMAIN will be sent back
+	mu              sync.Mutex      // used to synchronize access to block lists
 }
 
 // This will match the YAML configuration file where all settings are defined
 type YAMLConfig struct {
 	Resolvers []string `yaml:"resolvers"`
+	Timeout   int      `yaml:"update_timeout"`
 	Filters   struct {
 		Whitelist []string `yaml:"whitelist"`
 		Blacklist []string `yaml:"blacklist"`
@@ -64,7 +66,7 @@ func readCliArgs() Config {
 	flag.StringVar(&conf.yamlConfigFile, "c", "dnswall.yml", "configuration file name and path")
 	flag.BoolVar(&conf.dontFilter, "n", false, "don't filter DNS requests")
 	flag.BoolVar(&conf.debug, "d", false, "debug flag")
-	flag.IntVar(&conf.timeout, "t", 5, "timeout (in seconds) when sending queries to resolver or sending back data to client")
+	flag.IntVar(&conf.timeout, "t", 60, "timeout (in seconds) when sending queries to resolver or sending back data to client")
 
 	flag.Usage = func() {
 		fmt.Print(Usage)
@@ -131,12 +133,15 @@ func (yamlConf *YAMLConfig) read(configFile string) *YAMLConfig {
 
 // Read blocklists and convert them into regexes
 func (conf *Config) readBlocklists() {
+	//defer conf.mu.Unlock()
+
 	// read YAML config
 	var yamlConf YAMLConfig
 	yamlConf.read(conf.yamlConfigFile)
 	fmt.Printf("config=%+v\n", yamlConf)
 
 	// now read blocklists
+	conf.mu.Lock()
 	conf.filters.init()
 
 	for _, list := range yamlConf.Filters.Blacklist {
@@ -144,6 +149,6 @@ func (conf *Config) readBlocklists() {
 	}
 	for _, list := range yamlConf.Filters.Whitelist {
 		conf.filters.whiteList.readFilterFile(list)
-	}	
+	}
+	conf.mu.Unlock()
 }
-

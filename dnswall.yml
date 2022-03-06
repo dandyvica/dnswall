@@ -2,6 +2,8 @@ resolvers:
     - 1.1.1.1
     - 8.8.8.8
 
+update_timeout: 6000000000
+
 filters:
     blacklist:
         - ./tests/ads.txt
