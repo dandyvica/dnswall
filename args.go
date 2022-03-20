@@ -66,7 +66,7 @@ func readCliArgs() Config {
 	flag.StringVar(&conf.yamlConfigFile, "c", "dnswall.yml", "configuration file name and path")
 	flag.BoolVar(&conf.dontFilter, "n", false, "don't filter DNS requests")
 	flag.BoolVar(&conf.debug, "d", false, "debug flag")
-	flag.IntVar(&conf.timeout, "t", 60, "timeout (in seconds) when sending queries to resolver or sending back data to client")
+	flag.IntVar(&conf.timeout, "t", 300, "timeout (in seconds) when sending queries to resolver or sending back data to client")
 
 	flag.Usage = func() {
 		fmt.Print(Usage)

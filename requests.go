@@ -25,7 +25,7 @@ func handleDNSRequest(conn *net.UDPConn, requesterAddress net.Addr, buffer []byt
 	// if domain name is in the whitelist => pass
 	// if not, if in blacklist => reject
 	// otherwise => pass
-	conf.mu.Lock()
+	//conf.mu.Lock()
 	if conf.filters.isFiltered(question.Domain) && !conf.dontFilter {
 		err = rejectDomain(conn, buffer, requesterAddress)
 		if err != nil {
@@ -34,7 +34,7 @@ func handleDNSRequest(conn *net.UDPConn, requesterAddress net.Addr, buffer []byt
 		log.Printf("domain <%s> is blacklisted", question.Domain)
 		return
 	}
-	conf.mu.Unlock()
+	//conf.mu.Unlock()
 
 	// send question to resolver and wait for its answer
 	answerBuffer, nbReadBytes, err := queryResolver(buffer, conf, requesterAddress)

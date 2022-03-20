@@ -64,7 +64,7 @@ func (filter *RegexpFilter) readFilterFile(filterFile string) {
 		text := strings.TrimSpace(scanner.Text())
 
 		// skip comments
-		if strings.HasPrefix(text, "#") {
+		if strings.HasPrefix(text, "#") || text == "" {
 			continue
 		}
 

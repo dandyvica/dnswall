@@ -39,7 +39,7 @@ func main() {
 	log.Printf("listening to DNS requests")
 
 	// launch goroutine to regularly update the blocklists
-	go updateBlockLists(&conf)
+	//go updateBlockLists(&conf)
 
 	// handle DNS requests from clients
 	for {
